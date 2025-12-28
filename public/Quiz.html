@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speed Quiz - 15 Participants</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .timer-progress { transition: width 1s linear; }
+        .correct { background-color: #059669 !important; border-color: #34d399 !important; }
+        .incorrect { background-color: #dc2626 !important; border-color: #f87171 !important; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-800 p-4 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-extrabold tracking-tighter text-blue-500">FAST-QUIZ <span class="text-slate-500 font-normal text-sm ml-2">15-Player Edition</span></h1>
+            <div id="quiz-status" class="text-sm font-medium text-slate-400">Setup Phase</div>
+        </div>
+    </header>
+
+    <main class="flex-grow p-4 md:p-6">
+        <div id="app" class="max-w-7xl mx-auto">
+            
+            <!-- 1. SETUP SCREEN -->
+            <div id="setup-screen" class="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
+                <div class="mb-8 text-center">
+                    <h2 class="text-3xl font-extrabold mb-2">Participant Registration</h2>
+                    <p class="text-slate-400">Enter names for all 15 participants below.</p>
+                </div>
+                
+                <div id="p-inputs" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+                    <!-- JS generated 15 inputs -->
+                </div>
+
+                <button onclick="initQuiz()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-5 rounded-2xl transition-all active:scale-95 text-xl shadow-lg shadow-blue-900/20">
+                    Launch 15-Player Session
+                </button>
+            </div>
+
+            <!-- 2. QUIZ SCREEN -->
+            <div id="quiz-screen" class="hidden grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <!-- Main Question Area -->
+                <div class="lg:col-span-3 space-y-6">
+                    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-xl">
+                        <div class="flex justify-between items-end mb-6">
+                            <span id="q-count" class="text-blue-500 font-bold uppercase tracking-widest text-xs">Question 1 of 10</span>
+                            <div class="text-right">
+                                <span class="block text-xs uppercase text-slate-500 font-bold mb-1 text-right">Time Remaining</span>
+                                <span id="timer-text" class="text-5xl font-black text-yellow-500 tabular-nums">60s</span>
+                            </div>
+                        </div>
+
+                        <div class="w-full bg-slate-800 h-3 rounded-full mb-8 overflow-hidden">
+                            <div id="timer-bar" class="h-full bg-blue-500 timer-progress w-full"></div>
+                        </div>
+
+                        <h3 id="q-text" class="text-2xl md:text-4xl font-bold mb-10 leading-tight">Loading Question...</h3>
+
+                        <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- JS generated options -->
+                        </div>
+                    </div>
+
+                    <!-- Moderator Control Panel -->
+                    <div class="bg-blue-950/20 border border-blue-900/40 rounded-3xl p-6">
+                        <div class="flex flex-col md:flex-row items-center gap-6">
+                            <div class="flex-grow w-full">
+                                <label class="block text-xs font-bold text-blue-400 uppercase mb-2 tracking-wider">Assign Score to Winner:</label>
+                                <select id="winner-dropdown" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 text-white focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer">
+                                    <option value="">No one / Incorrect / Skip</option>
+                                </select>
+                            </div>
+                            <button id="next-btn" onclick="goToNext()" class="w-full md:w-auto px-12 py-4 bg-white text-slate-950 font-black rounded-xl hover:bg-blue-100 transition-all disabled:opacity-20 disabled:grayscale">
+                                NEXT QUESTION →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Side Leaderboard (Scrollable for 15 players) -->
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 h-fit lg:sticky lg:top-24 max-h-[85vh] flex flex-col">
+                    <h3 class="text-lg font-extrabold mb-4 flex items-center gap-2">
+                        <span class="p-1 bg-yellow-500 rounded text-slate-950">🏆</span> Leaderboard
+                    </h3>
+                    <div id="rankings" class="space-y-2 overflow-y-auto pr-2">
+                        <!-- JS generated ranks -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. END SCREEN -->
+            <div id="end-screen" class="hidden bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center shadow-2xl">
+                <div class="text-7xl mb-6">👑</div>
+                <h2 class="text-5xl font-black mb-2 text-white uppercase italic">Victory!</h2>
+                <p class="text-slate-400 text-xl mb-10">The ultimate champion is:</p>
+                <div id="final-champ" class="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-12">Player Name</div>
+                <button onclick="location.reload()" class="px-12 py-5 bg-slate-800 hover:bg-slate-700 rounded-2xl font-bold transition-all border border-slate-700">
+                    Restart Application
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // --- DATA CONFIGURATION ---
+        const QUIZ_DATA = [
+            { q: "What is the capital of France?", o: ["London", "Berlin", "Paris", "Madrid"], a: 2 },
+            { q: "Which planet is known as the Red Planet?", o: ["Venus", "Mars", "Jupiter", "Saturn"], a: 1 },
+            { q: "What is the chemical symbol for Water?", o: ["CO2", "H2O", "NaCl", "O2"], a: 1 },
+            { q: "Which animal is known as the King of the Jungle?", o: ["Tiger", "Elephant", "Lion", "Giraffe"], a: 2 },
+            { q: "How many continents are there on Earth?", o: ["5", "6", "7", "8"], a: 2 },
+            { q: "Which is the largest ocean in the world?", o: ["Atlantic", "Indian", "Arctic", "Pacific"], a: 3 },
+            { q: "What is the tallest mountain on Earth?", o: ["K2", "Everest", "Kilimanjaro", "Denali"], a: 1 },
+            { q: "What is 7 multiplied by 8?", o: ["54", "56", "62", "64"], a: 1 },
+            { q: "Which color is at the top of a standard rainbow?", o: ["Blue", "Yellow", "Green", "Red"], a: 3 },
+            { q: "Who painted the Mona Lisa?", o: ["Van Gogh", "Picasso", "Da Vinci", "Michelangelo"], a: 2 }
+        ];
+
+        let players = [];
+        let currentIdx = 0;
+        let timer = 60;
+        let interval;
+        let roundOver = false;
+
+        // --- INITIALIZATION ---
+        const pContainer = document.getElementById('p-inputs');
+        for (let i = 1; i <= 15; i++) {
+            pContainer.innerHTML += `
+                <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-800 flex items-center gap-3 focus-within:border-blue-500/50 transition-colors">
+                    <span class="text-slate-600 font-bold text-xs w-5">${i}</span>
+                    <input type="text" id="name-${i}" placeholder="Participant ${i}" value="Player ${i}" 
+                    class="bg-transparent border-none outline-none text-white w-full placeholder:text-slate-700 text-sm">
+                </div>`;
+        }
+
+        function initQuiz() {
+            players = [];
+            const dropdown = document.getElementById('winner-dropdown');
+            dropdown.innerHTML = '<option value="">No one / Incorrect / Skip</option>';
+
+            for (let i = 1; i <= 15; i++) {
+                const name = document.getElementById(`name-${i}`).value.trim() || `Player ${i}`;
+                players.push({ name, score: 0 });
+                dropdown.innerHTML += `<option value="${i-1}">${name}</option>`;
+            }
+
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            loadQuestion();
+        }
+
+        // --- CORE LOGIC ---
+        function loadQuestion() {
+            const data = QUIZ_DATA[currentIdx];
+            document.getElementById('q-count').innerText = `Question ${currentIdx + 1} of ${QUIZ_DATA.length}`;
+            document.getElementById('q-text').innerText = data.q;
+            document.getElementById('quiz-status').innerText = "Live Question";
+            
+            const grid = document.getElementById('options-grid');
+            grid.innerHTML = '';
+            data.o.forEach((opt, i) => {
+                grid.innerHTML += `
+                    <button onclick="reveal(${i})" class="opt-btn w-full text-left bg-slate-800 hover:bg-slate-700 border border-slate-700 p-6 rounded-2xl transition-all font-semibold text-lg flex items-center gap-4 group">
+                        <span class="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-xs group-hover:bg-blue-600 transition-colors">${String.fromCharCode(65+i)}</span>
+                        ${opt}
+                    </button>`;
+            });
+
+            roundOver = false;
+            document.getElementById('next-btn').disabled = true;
+            document.getElementById('winner-dropdown').value = "";
+            startTimer();
+            refreshLeaderboard();
+        }
+
+        function startTimer() {
+            timer = 60;
+            const bar = document.getElementById('timer-bar');
+            const txt = document.getElementById('timer-text');
+            
+            bar.style.width = '100%';
+            txt.innerText = '60s';
+            txt.className = 'text-5xl font-black text-yellow-500 tabular-nums';
+
+            clearInterval(interval);
+            interval = setInterval(() => {
+                timer--;
+                txt.innerText = `${timer}s`;
+                bar.style.width = `${(timer/60)*100}%`;
+
+                if (timer <= 15) txt.className = 'text-5xl font-black text-red-500 tabular-nums animate-pulse';
+                if (timer <= 0) { clearInterval(interval); reveal(-1); }
+            }, 1000);
+        }
+
+        function reveal(selectedIdx) {
+            if (roundOver) return;
+            roundOver = true;
+            clearInterval(interval);
+
+            const correctIdx = QUIZ_DATA[currentIdx].a;
+            const btns = document.querySelectorAll('.opt-btn');
+            
+            btns.forEach((btn, i) => {
+                btn.disabled = true;
+                if (i === correctIdx) btn.classList.add('correct');
+                else if (i === selectedIdx) btn.classList.add('incorrect');
+            });
+
+            document.getElementById('next-btn').disabled = false;
+            document.getElementById('quiz-status').innerText = "Assigning Score";
+        }
+
+        function goToNext() {
+            const winnerIdx = document.getElementById('winner-dropdown').value;
+            if (winnerIdx !== "") {
+                // Formula: 1000 base + (remaining seconds * 10)
+                const points = 1000 + (timer * 10);
+                players[winnerIdx].score += points;
+            }
+
+            currentIdx++;
+            if (currentIdx < QUIZ_DATA.length) {
+                loadQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function refreshLeaderboard() {
+            const list = document.getElementById('rankings');
+            const sorted = [...players].sort((a,b) => b.score - a.score);
+            
+            list.innerHTML = '';
+            sorted.forEach((p, i) => {
+                const isTop3 = i < 3;
+                list.innerHTML += `
+                    <div class="flex justify-between items-center p-3 rounded-xl ${isTop3 ? 'bg-blue-600/10 border border-blue-500/30' : 'bg-slate-800/40 border border-slate-800/50'}">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <span class="text-[10px] font-black w-4 ${isTop3 ? 'text-yellow-400' : 'text-slate-500'}">${i+1}</span>
+                            <span class="font-bold text-xs text-slate-200 truncate">${p.name}</span>
+                        </div>
+                        <span class="font-mono text-blue-400 font-bold text-xs ml-2">${p.score.toLocaleString()}</span>
+                    </div>`;
+            });
+        }
+
+        function finishQuiz() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+            document.getElementById('quiz-status').innerText = "Game Over";
+            
+            const sorted = [...players].sort((a,b) => b.score - a.score);
+            document.getElementById('final-champ').innerText = sorted[0].name;
+        }
+    </script>
+</body>
+</html>

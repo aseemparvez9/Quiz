@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fast Quiz – Player</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-950 text-white min-h-screen p-6">
+
+  <h1 class="text-2xl font-black mb-4 text-blue-500">FAST QUIZ – PLAYER</h1>
+
+  <!-- TIMER -->
+  <div class="mb-4">
+    <span class="text-sm text-slate-400">Time Left</span>
+    <div id="timer-text" class="text-4xl font-black text-yellow-500">60s</div>
+    <div class="w-full bg-slate-800 h-2 rounded mt-2">
+      <div id="timer-bar" class="bg-blue-500 h-2 rounded w-full"></div>
+    </div>
+  </div>
+
+  <!-- QUESTION -->
+  <h2 id="q-text" class="text-xl font-bold mb-6">
+    Waiting for question...
+  </h2>
+
+  <!-- OPTIONS -->
+  <div id="options-grid" class="grid grid-cols-1 gap-4 mb-6"></div>
+
+  <!-- SUBMIT -->
+  <button
+    id="submitBtn"
+    disabled
+    class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black disabled:opacity-40"
+  >
+    SUBMIT ANSWER
+  </button>
+
+  <!-- LEADERBOARD -->
+  <div class="mt-10">
+    <h3 class="font-black text-lg mb-3">🏆 Leaderboard</h3>
+    <div id="rankings" class="space-y-2"></div>
+  </div>
+
+  <script src="player.js"></script>
+</body>
+</html>
