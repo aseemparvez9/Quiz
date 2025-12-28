@@ -98,7 +98,7 @@ function startQuestion() {
   }, 1000);
 }
 
-
-http.listen(3000, () =>
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () =>
   console.log("Server running http://localhost:3000")
 );
