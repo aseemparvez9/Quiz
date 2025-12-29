@@ -27,3 +27,21 @@ socket.on("leaderboardUpdate", players => {
       list.innerHTML += `<div>${p.name}: ${p.score}</div>`;
     });
 });
+socket.on("quizEnded", ({ players }) => {
+  document.getElementById("quiz-screen").classList.add("hidden");
+  document.getElementById("end-screen").classList.remove("hidden");
+
+  const board = document.getElementById("final-leaderboard");
+  board.innerHTML = "";
+
+  Object.values(players)
+    .sort((a, b) => b.score - a.score)
+    .forEach((p, i) => {
+      board.innerHTML += `
+        <div class="flex justify-between bg-slate-800 p-4 rounded-xl">
+          <span>${i + 1}. ${p.name}</span>
+          <span class="font-bold text-green-400">${p.score}</span>
+        </div>
+      `;
+    });
+});

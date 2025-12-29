@@ -22,5 +22,23 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="host.js"></script>
+
+<!-- END QUIZ SCREEN -->
+<div id="end-screen" class="hidden mt-10 bg-slate-800 p-6 rounded-xl">
+  <h2 class="text-3xl font-bold text-green-400 mb-4">
+    🎉 Quiz Completed
+  </h2>
+
+  <h3 class="text-xl mb-2">Final Leaderboard</h3>
+
+  <div id="final-leaderboard" class="space-y-2"></div>
+
+  <button
+    onclick="location.reload()"
+    class="mt-6 bg-blue-600 px-6 py-3 rounded font-bold">
+    Restart Quiz
+  </button>
+</div>
+
 </body>
 </html>

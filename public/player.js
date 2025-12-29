@@ -114,3 +114,7 @@ socket.on("roundWinner", ({ name, points }) => {
 // ROOM LOCK
 // --------------------
 socket.on("joinDenied", msg => alert(msg));
+
+socket.on("quizEnded", ({ players }) => {
+  alert("🎉 Quiz completed! Check final leaderboard.");
+});

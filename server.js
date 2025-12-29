@@ -6,12 +6,10 @@ const io = require("socket.io")(http);
 app.use(express.static("public"));
 let questionLocked = false;
 let winnerSocketId = null;
+let quizEnded = false;
 
-const QUIZ_DATA = [
-  { q: "Capital of France?", o: ["London", "Berlin", "Paris", "Rome"], a: 2 },
-  { q: "2 + 2 = ?", o: ["3", "4", "5", "6"], a: 1 },
-  { q: "Red Planet?", o: ["Earth", "Mars", "Jupiter", "Venus"], a: 1 }
-];
+
+const QUIZ_DATA = require("./quiz-data");
 
 let players = {};
 let quizState = {
@@ -34,41 +32,33 @@ io.on("connection", socket => {
   });
 
   socket.on("nextQuestion", () => {
-    quizState.currentIdx++;
-    if (quizState.currentIdx >= QUIZ_DATA.length) {
-      io.emit("quizEnded");
-      return;
-    }
+  quizState.currentIdx++;
+
+  if (quizState.currentIdx < QUIZ_DATA.length) {
     startQuestion();
-  });
+  } else {
+    endQuiz();
+  }
+});
+
 
   socket.on("submitAnswer", ({ questionIdx, selectedIdx }) => {
   const player = players[socket.id];
-  if (!player) return;
+  //if (!player) return;
+  if (quizEnded) return;
 
-  // Already answered
+  // Prevent multiple submissions
   if (player.answers[questionIdx] !== undefined) return;
 
   player.answers[questionIdx] = selectedIdx;
 
-  // If winner already decided, ignore
-  if (questionLocked) return;
-
   const correctIdx = QUIZ_DATA[questionIdx].a;
 
   if (selectedIdx === correctIdx) {
-    questionLocked = true;
-    winnerSocketId = socket.id;
-
     const points = 1000 + quizState.timer * 10;
     player.score += points;
 
-    console.log(`🥇 WINNER: ${player.name} +${points}`);
-
-    io.emit("roundWinner", {
-      name: player.name,
-      points
-    });
+    console.log(`✅ ${player.name} +${points}`);
 
     io.emit("leaderboardUpdate", players);
   }
@@ -96,6 +86,27 @@ function startQuestion() {
     io.emit("timerUpdate", quizState.timer);
     if (quizState.timer <= 0) clearInterval(quizState.interval);
   }, 1000);
+}
+
+function endQuiz() {
+  clearInterval(quizState.interval);
+
+  console.log("🏁 Quiz completed");
+
+  io.emit("quizEnded", {
+    players,
+    totalQuestions: QUIZ_DATA.length
+  });
+}
+
+function endQuiz() {
+  quizEnded = true;
+  clearInterval(quizState.interval);
+
+  io.emit("quizEnded", {
+    players,
+    totalQuestions: QUIZ_DATA.length
+  });
 }
 
 const PORT = process.env.PORT || 3000;
