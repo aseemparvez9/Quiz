@@ -22,9 +22,17 @@ io.on("connection", socket => {
   console.log("Connected:", socket.id);
 
   socket.on("joinRoom", ({ name }) => {
-    players[socket.id] = { name, score: 0, answers: {} };
-    io.emit("leaderboardUpdate", players);
-  });
+  players[socket.id] = {
+    id: socket.id,
+    name,
+    score: 0,
+    answers: {}   // ✅ VERY IMPORTANT
+  };
+
+  socket.emit("joined");
+  io.emit("leaderboardUpdate", players);
+});
+
 
   socket.on("startQuiz", () => {
     quizState.currentIdx = 0;
@@ -45,6 +53,10 @@ io.on("connection", socket => {
   socket.on("submitAnswer", ({ questionIdx, selectedIdx }) => {
   const player = players[socket.id];
   //if (!player) return;
+  if (!player) {
+  console.log("⚠️ Player not found:", socket.id);
+  return;
+}
   if (quizEnded) return;
 
   // Prevent multiple submissions
