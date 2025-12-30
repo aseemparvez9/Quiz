@@ -1,30 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Host</title>
+  <title>Host Panel</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white p-6">
 
 <h1 class="text-2xl font-bold mb-4">HOST PANEL</h1>
 
-<button id="startQuizBtn" class="bg-green-600 px-4 py-2 rounded mr-2">Start Quiz</button>
-<button id="nextQuestionBtn" class="bg-blue-600 px-4 py-2 rounded">Next Question</button>
+<div class="mb-6">
+  <button id="startQuizBtn"
+          class="bg-green-600 px-4 py-2 rounded mr-2">
+    Start Quiz
+  </button>
 
-<h2 class="mt-6 text-xl">Question</h2>
-<div id="q-text" class="bg-slate-800 p-4 rounded mt-2">Waiting...</div>
+  <button id="nextQuestionBtn"
+          class="bg-blue-600 px-4 py-2 rounded">
+    Next Question
+  </button>
+</div>
 
-<h2 class="mt-6 text-xl">Timer</h2>
-<div id="timer-text">60</div>
+<!-- MAIN LAYOUT -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
 
-<h2 class="mt-6 text-xl">Leaderboard</h2>
-<div id="rankings"></div>
+  <!-- LEFT: QUESTION + TIMER -->
+  <div class="md:col-span-3 bg-slate-800 p-6 rounded-xl">
+    <h2 class="text-xl font-bold mb-2">Question</h2>
+    <div id="q-text" class="text-lg mb-6">
+      Waiting...
+    </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="host.js"></script>
+    <h2 class="text-xl font-bold mb-2">Timer</h2>
+    <div id="timer-text"
+         class="text-5xl font-bold text-yellow-400">
+      60
+    </div>
+  </div>
+
+  <!-- RIGHT: LEADERBOARD -->
+  <div class="md:col-span-1 bg-slate-800 p-6 rounded-xl sticky top-6">
+    <h2 class="text-xl font-bold mb-4">🏆 Leaderboard</h2>
+    <div id="rankings" class="space-y-2"></div>
+  </div>
+
+</div>
 
 <!-- END QUIZ SCREEN -->
-<div id="end-screen" class="hidden mt-10 bg-slate-800 p-6 rounded-xl">
+<div id="end-screen"
+     class="hidden mt-10 bg-slate-800 p-6 rounded-xl">
+
   <h2 class="text-3xl font-bold text-green-400 mb-4">
     🎉 Quiz Completed
   </h2>
@@ -33,12 +57,71 @@
 
   <div id="final-leaderboard" class="space-y-2"></div>
 
-  <button
-    onclick="location.reload()"
-    class="mt-6 bg-blue-600 px-6 py-3 rounded font-bold">
+  <button onclick="location.reload()"
+          class="mt-6 bg-blue-600 px-6 py-3 rounded font-bold">
     Restart Quiz
   </button>
 </div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+/* ---------------- BUTTONS ---------------- */
+document.getElementById("startQuizBtn").onclick = () => {
+  socket.emit("startQuiz");
+};
+
+document.getElementById("nextQuestionBtn").onclick = () => {
+  socket.emit("nextQuestion");
+};
+
+/* ---------------- QUESTION ---------------- */
+socket.on("questionUpdate", ({ question }) => {
+  document.getElementById("q-text").innerText = question.q;
+});
+
+/* ---------------- TIMER ---------------- */
+socket.on("timerUpdate", time => {
+  document.getElementById("timer-text").innerText = time;
+});
+
+/* ---------------- LEADERBOARD ---------------- */
+socket.on("leaderboardUpdate", players => {
+  const rankings = document.getElementById("rankings");
+  rankings.innerHTML = "";
+
+  Object.values(players)
+    .sort((a, b) => b.score - a.score)
+    .forEach((p, i) => {
+      rankings.innerHTML += `
+        <div class="flex justify-between bg-slate-900 p-2 rounded">
+          <span>${i + 1}. ${p.name}</span>
+          <span class="font-bold text-green-400">${p.score}</span>
+        </div>
+      `;
+    });
+});
+
+/* ---------------- END QUIZ ---------------- */
+socket.on("quizEnded", ({ players }) => {
+  document.getElementById("end-screen").classList.remove("hidden");
+
+  const board = document.getElementById("final-leaderboard");
+  board.innerHTML = "";
+
+  Object.values(players)
+    .sort((a, b) => b.score - a.score)
+    .forEach((p, i) => {
+      board.innerHTML += `
+        <div class="flex justify-between bg-slate-900 p-3 rounded">
+          <span>${i + 1}. ${p.name}</span>
+          <span class="font-bold text-green-400">${p.score}</span>
+        </div>
+      `;
+    });
+});
+</script>
 
 </body>
 </html>

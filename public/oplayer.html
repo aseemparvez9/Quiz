@@ -1,48 +1,187 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Fast Quiz – Player</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <title>Player</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+<body class="bg-slate-900 text-white p-6">
 
-<body class="bg-slate-950 text-white min-h-screen p-6">
+<h1 class="text-2xl font-bold mb-4">PLAYER</h1>
 
-  <h1 class="text-2xl font-black mb-4 text-blue-500">FAST QUIZ – PLAYER</h1>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
 
-  <!-- TIMER -->
-  <div class="mb-4">
-    <span class="text-sm text-slate-400">Time Left</span>
-    <div id="timer-text" class="text-4xl font-black text-yellow-500">60s</div>
-    <div class="w-full bg-slate-800 h-2 rounded mt-2">
-      <div id="timer-bar" class="bg-blue-500 h-2 rounded w-full"></div>
+  <!-- LEFT -->
+  <div class="md:col-span-3 bg-slate-800 p-6 rounded-xl">
+
+    <!-- TIMER -->
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold">Question</h2>
+      <div id="timer-text"
+           class="text-4xl font-bold text-yellow-400">
+        60
+      </div>
     </div>
+
+    <div id="q-text" class="text-lg mb-6">
+      Waiting for host...
+    </div>
+
+    <!-- OPTIONS -->
+    <div id="options" class="space-y-3 mb-6"></div>
+
+    <button id="submitBtn"
+            class="bg-green-600 px-6 py-3 rounded font-bold hidden">
+      Submit Answer
+    </button>
+
+    <p id="status" class="mt-4 text-slate-400"></p>
   </div>
 
-  <!-- QUESTION -->
-  <h2 id="q-text" class="text-xl font-bold mb-6">
-    Waiting for question...
-  </h2>
-
-  <!-- OPTIONS -->
-  <div id="options-grid" class="grid grid-cols-1 gap-4 mb-6"></div>
-
-  <!-- SUBMIT -->
-  <button
-    id="submitBtn"
-    disabled
-    class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black disabled:opacity-40"
-  >
-    SUBMIT ANSWER
-  </button>
-
-  <!-- LEADERBOARD -->
-  <div class="mt-10">
-    <h3 class="font-black text-lg mb-3">🏆 Leaderboard</h3>
+  <!-- RIGHT -->
+  <div class="md:col-span-1 bg-slate-800 p-6 rounded-xl sticky top-6">
+    <h2 class="text-xl font-bold mb-4">🏆 Leaderboard</h2>
     <div id="rankings" class="space-y-2"></div>
   </div>
 
-  <script src="player.js"></script>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+
+/* ---------------- JOIN ---------------- */
+const playerName = prompt("Enter your name") || "Guest";
+socket.emit("joinRoom", { name: playerName });
+
+let currentQuestionIdx = null;
+let selectedIdx = null;
+let correctIdx = null;
+let answered = false;
+
+/* ---------------- QUESTION ---------------- */
+socket.on("questionUpdate", ({ index, question }) => {
+  currentQuestionIdx = index;
+  correctIdx = question.a;     // 🔥 store correct answer
+  selectedIdx = null;
+  answered = false;
+
+  document.getElementById("q-text").innerText = question.q;
+
+  const optionsDiv = document.getElementById("options");
+  optionsDiv.innerHTML = "";
+
+  question.o.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    btn.className =
+      "block w-full bg-slate-900 p-4 rounded hover:bg-slate-700 transition";
+    btn.innerText = opt;
+    btn.dataset.idx = i;
+    btn.onclick = () => {
+      if (answered) return;
+      selectedIdx = i;
+      highlightOption(i);
+    };
+    optionsDiv.appendChild(btn);
+  });
+
+  document.getElementById("submitBtn").classList.remove("hidden");
+  document.getElementById("submitBtn").disabled = false;
+  document.getElementById("status").innerText = "";
+});
+
+/* ---------------- HIGHLIGHT ---------------- */
+function highlightOption(idx) {
+  [...document.getElementById("options").children].forEach((b, i) => {
+    b.className =
+      "block w-full p-4 rounded transition " +
+      (i === idx
+        ? "bg-blue-600"
+        : "bg-slate-900 hover:bg-slate-700");
+  });
+}
+
+/* ---------------- SUBMIT ---------------- */
+document.getElementById("submitBtn").onclick = () => {
+  if (selectedIdx === null) return alert("Select an option");
+
+  answered = true;
+
+  socket.emit("submitAnswer", {
+    questionIdx: currentQuestionIdx,
+    selectedIdx
+  });
+
+  document.getElementById("submitBtn").disabled = true;
+  document.getElementById("status").innerText = "Answer submitted";
+};
+
+/* ---------------- TIMER ---------------- */
+socket.on("timerUpdate", time => {
+  const timerEl = document.getElementById("timer-text");
+  timerEl.innerText = time;
+
+  if (time <= 15) {
+    timerEl.className =
+      "text-4xl font-bold text-red-500 animate-pulse";
+  } else {
+    timerEl.className =
+      "text-4xl font-bold text-yellow-400";
+  }
+
+  // ⛔ TIME UP
+  if (time === 0) {
+    document.getElementById("submitBtn").disabled = true;
+    revealCorrectAnswer();
+  }
+});
+
+/* ---------------- REVEAL ANSWER ---------------- */
+function revealCorrectAnswer() {
+  const buttons = [...document.getElementById("options").children];
+
+  buttons.forEach((btn, i) => {
+    btn.onclick = null; // lock options
+
+    if (i === correctIdx) {
+      btn.className =
+        "block w-full p-4 rounded bg-green-600 font-bold";
+    } else if (i === selectedIdx) {
+      btn.className =
+        "block w-full p-4 rounded bg-red-600";
+    } else {
+      btn.className =
+        "block w-full p-4 rounded bg-slate-700 opacity-60";
+    }
+  });
+
+  document.getElementById("status").innerText =
+    "Time's up! Correct answer shown.";
+}
+
+/* ---------------- LEADERBOARD ---------------- */
+socket.on("leaderboardUpdate", players => {
+  const rankings = document.getElementById("rankings");
+  rankings.innerHTML = "";
+
+  Object.values(players)
+    .sort((a, b) => b.score - a.score)
+    .forEach((p, i) => {
+      rankings.innerHTML += `
+        <div class="flex justify-between bg-slate-900 p-2 rounded">
+          <span>${i + 1}. ${p.name}</span>
+          <span class="font-bold text-green-400">${p.score}</span>
+        </div>
+      `;
+    });
+});
+
+/* ---------------- END QUIZ ---------------- */
+socket.on("quizEnded", () => {
+  document.getElementById("q-text").innerText = "Quiz completed!";
+  document.getElementById("options").innerHTML = "";
+  document.getElementById("submitBtn").classList.add("hidden");
+});
+</script>
+
 </body>
 </html>
