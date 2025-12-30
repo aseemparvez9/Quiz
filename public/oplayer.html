@@ -3,185 +3,155 @@
 <head>
   <title>Player</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .correct { background:#059669 !important; }
+    .incorrect { background:#dc2626 !important; }
+  </style>
 </head>
-<body class="bg-slate-900 text-white p-6">
+<body class="bg-slate-950 text-white p-6">
 
 <h1 class="text-2xl font-bold mb-4">PLAYER</h1>
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<!-- Quiz Screen -->
+<div id="quiz-screen" class="flex gap-6">
 
-  <!-- LEFT -->
-  <div class="md:col-span-3 bg-slate-800 p-6 rounded-xl">
+  <!-- Question & Options -->
+  <div class="flex-1 space-y-4">
+    <div id="q-text" class="bg-slate-800 p-4 rounded">Waiting...</div>
 
-    <!-- TIMER -->
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold">Question</h2>
-      <div id="timer-text"
-           class="text-4xl font-bold text-yellow-400">
-        60
-      </div>
+    <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+    <div class="flex items-center gap-4">
+      <span class="text-xl">Timer:</span>
+      <span id="timer-text" class="text-2xl font-bold">60s</span>
     </div>
 
-    <div id="q-text" class="text-lg mb-6">
-      Waiting for host...
-    </div>
-
-    <!-- OPTIONS -->
-    <div id="options" class="space-y-3 mb-6"></div>
-
-    <button id="submitBtn"
-            class="bg-green-600 px-6 py-3 rounded font-bold hidden">
+    <button id="submit-btn"
+      class="bg-blue-600 px-4 py-2 rounded font-bold
+             disabled:bg-slate-600
+             disabled:text-slate-300
+             disabled:cursor-not-allowed
+             disabled:opacity-60
+             transition-all"
+      disabled>
       Submit Answer
     </button>
-
-    <p id="status" class="mt-4 text-slate-400"></p>
   </div>
 
-  <!-- RIGHT -->
-  <div class="md:col-span-1 bg-slate-800 p-6 rounded-xl sticky top-6">
-    <h2 class="text-xl font-bold mb-4">🏆 Leaderboard</h2>
-    <div id="rankings" class="space-y-2"></div>
+  <!-- Leaderboard -->
+  <div class="w-64 bg-slate-800 p-4 rounded">
+    <h2 class="mb-2">Leaderboard</h2>
+    <div id="rankings"></div>
   </div>
+</div>
 
+<!-- End Screen -->
+<div id="end-screen" class="hidden text-center mt-6">
+  <h2 class="text-4xl font-black">🏆 Winner</h2>
+  <div id="final-champ" class="text-6xl mt-4"></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
 
-/* ---------------- JOIN ---------------- */
-const playerName = prompt("Enter your name") || "Guest";
+let playerName = prompt("Enter your name") || "Guest";
+let currentIdx = 0;
+let selectedIdx = null;
+let canSubmit = false;
+
+// Join Room
 socket.emit("joinRoom", { name: playerName });
 
-let currentQuestionIdx = null;
-let selectedIdx = null;
-let correctIdx = null;
-let answered = false;
-
-/* ---------------- QUESTION ---------------- */
+// Receive Question
 socket.on("questionUpdate", ({ index, question }) => {
-  currentQuestionIdx = index;
-  correctIdx = question.a;     // 🔥 store correct answer
+  currentIdx = index;
   selectedIdx = null;
-  answered = false;
+  canSubmit = true;
 
   document.getElementById("q-text").innerText = question.q;
+  document.getElementById("submit-btn").disabled = true;
 
-  const optionsDiv = document.getElementById("options");
-  optionsDiv.innerHTML = "";
+  const grid = document.getElementById("options-grid");
+  grid.innerHTML = "";
 
   question.o.forEach((opt, i) => {
     const btn = document.createElement("button");
-    btn.className =
-      "block w-full bg-slate-900 p-4 rounded hover:bg-slate-700 transition";
     btn.innerText = opt;
-    btn.dataset.idx = i;
-    btn.onclick = () => {
-      if (answered) return;
-      selectedIdx = i;
-      highlightOption(i);
-    };
-    optionsDiv.appendChild(btn);
+    btn.className = "bg-slate-800 p-4 rounded";
+    btn.onclick = () => selectOption(i, btn);
+    grid.appendChild(btn);
   });
-
-  document.getElementById("submitBtn").classList.remove("hidden");
-  document.getElementById("submitBtn").disabled = false;
-  document.getElementById("status").innerText = "";
 });
 
-/* ---------------- HIGHLIGHT ---------------- */
-function highlightOption(idx) {
-  [...document.getElementById("options").children].forEach((b, i) => {
-    b.className =
-      "block w-full p-4 rounded transition " +
-      (i === idx
-        ? "bg-blue-600"
-        : "bg-slate-900 hover:bg-slate-700");
-  });
-}
-
-/* ---------------- SUBMIT ---------------- */
-document.getElementById("submitBtn").onclick = () => {
-  if (selectedIdx === null) return alert("Select an option");
-
-  answered = true;
-
-  socket.emit("submitAnswer", {
-    questionIdx: currentQuestionIdx,
-    selectedIdx
-  });
-
-  document.getElementById("submitBtn").disabled = true;
-  document.getElementById("status").innerText = "Answer submitted";
-};
-
-/* ---------------- TIMER ---------------- */
+// Timer Update
+<!-- Timer update -->
 socket.on("timerUpdate", time => {
-  const timerEl = document.getElementById("timer-text");
-  timerEl.innerText = time;
-
-  if (time <= 15) {
-    timerEl.className =
-      "text-4xl font-bold text-red-500 animate-pulse";
-  } else {
-    timerEl.className =
-      "text-4xl font-bold text-yellow-400";
-  }
-
-  // ⛔ TIME UP
-  if (time === 0) {
-    document.getElementById("submitBtn").disabled = true;
-    revealCorrectAnswer();
+  document.getElementById("timer-text").innerText = `${time}s`;
+  if (time <= 0) {
+    canSubmit = false;
+    document.getElementById("submit-btn").disabled = true;
+    document.querySelectorAll("#options-grid button").forEach(b => b.disabled = true);
   }
 });
 
-/* ---------------- REVEAL ANSWER ---------------- */
-function revealCorrectAnswer() {
-  const buttons = [...document.getElementById("options").children];
 
-  buttons.forEach((btn, i) => {
-    btn.onclick = null; // lock options
-
-    if (i === correctIdx) {
-      btn.className =
-        "block w-full p-4 rounded bg-green-600 font-bold";
-    } else if (i === selectedIdx) {
-      btn.className =
-        "block w-full p-4 rounded bg-red-600";
-    } else {
-      btn.className =
-        "block w-full p-4 rounded bg-slate-700 opacity-60";
-    }
-  });
-
-  document.getElementById("status").innerText =
-    "Time's up! Correct answer shown.";
-}
-
-/* ---------------- LEADERBOARD ---------------- */
+// Leaderboard Update
 socket.on("leaderboardUpdate", players => {
-  const rankings = document.getElementById("rankings");
-  rankings.innerHTML = "";
-
-  Object.values(players)
-    .sort((a, b) => b.score - a.score)
-    .forEach((p, i) => {
-      rankings.innerHTML += `
-        <div class="flex justify-between bg-slate-900 p-2 rounded">
-          <span>${i + 1}. ${p.name}</span>
-          <span class="font-bold text-green-400">${p.score}</span>
-        </div>
-      `;
+  const list = document.getElementById("rankings");
+  list.innerHTML = "";
+  Object.values(players).sort((a,b)=>b.score-b.score)
+    .forEach(p => {
+      list.innerHTML += `<div>${p.name}: ${p.score}</div>`;
     });
 });
 
-/* ---------------- END QUIZ ---------------- */
-socket.on("quizEnded", () => {
-  document.getElementById("q-text").innerText = "Quiz completed!";
-  document.getElementById("options").innerHTML = "";
-  document.getElementById("submitBtn").classList.add("hidden");
+// Reveal Correct Answer
+socket.on("revealAnswer", ({ correctIdx }) => {
+  const buttons = document.querySelectorAll("#options-grid button");
+  buttons.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === correctIdx) btn.classList.add("correct");
+    else if (i === selectedIdx) btn.classList.add("incorrect");
+  });
+});
+
+// Submit Answer
+document.getElementById("submit-btn").onclick = () => {
+  if (!canSubmit || selectedIdx === null) return;
+
+  socket.emit("submitAnswer", {
+    questionIdx: currentIdx,
+    selectedIdx
+  });
+
+  canSubmit = false;
+  document.getElementById("submit-btn").disabled = true;
+
+  document.querySelectorAll("#options-grid button")
+    .forEach(b => b.disabled = true);
+};
+
+// Select Option
+function selectOption(idx, btn) {
+  if (!canSubmit) return;
+
+  selectedIdx = idx;
+
+  document.querySelectorAll("#options-grid button")
+    .forEach(b => b.classList.remove("bg-yellow-600"));
+
+  btn.classList.add("bg-yellow-600");
+  document.getElementById("submit-btn").disabled = false;
+}
+
+// Quiz Ended
+socket.on("quizEnded", ({ players }) => {
+  document.getElementById("quiz-screen").style.display = "none";
+  document.getElementById("end-screen").classList.remove("hidden");
+  const winner = Object.values(players).sort((a,b)=>b.score-b.score)[0];
+  document.getElementById("final-champ").innerText = winner.name;
 });
 </script>
-
 </body>
 </html>
