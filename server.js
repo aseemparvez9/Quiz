@@ -12,7 +12,7 @@ let quizEnded = false;
 
 let quizState = {
   currentIdx: 0,
-  timer: 30, // reduced to 30 seconds
+  timer: 60, // reduced to 30 seconds
   interval: null
 };
 
@@ -60,7 +60,7 @@ io.on("connection", socket => {
 });
 
 function startQuestion() {
-  quizState.timer = 30; // 30 seconds
+  quizState.timer = 60; // 30 seconds
 
   Object.values(players).forEach(p => (p.answers = {}));
 
