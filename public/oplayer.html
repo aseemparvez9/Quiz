@@ -1,57 +1,62 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Player</title>
+  <meta charset="UTF-8" />
+  <title>Quiz Player</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    .correct { background:#059669 !important; }
-    .incorrect { background:#dc2626 !important; }
+    .correct { background-color: #059669 !important; }
+    .incorrect { background-color: #dc2626 !important; }
+    .selected { background-color: #facc15 !important; color: black; }
   </style>
 </head>
+
 <body class="bg-slate-950 text-white p-6">
 
 <h1 class="text-2xl font-bold mb-4">PLAYER</h1>
 
-<!-- Quiz Screen -->
+<!-- QUIZ SCREEN -->
 <div id="quiz-screen" class="flex gap-6">
 
-  <!-- Question & Options -->
+  <!-- LEFT -->
   <div class="flex-1 space-y-4">
-    <div id="q-text" class="bg-slate-800 p-4 rounded">Waiting...</div>
+    <div id="q-text" class="bg-slate-800 p-4 rounded text-lg">
+      Waiting for quiz to start...
+    </div>
 
     <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
 
-    <div class="flex items-center gap-4">
-      <span class="text-xl">Timer:</span>
-      <span id="timer-text" class="text-2xl font-bold">60s</span>
+    <div class="flex items-center gap-4 mt-4">
+      <div class="text-xl font-bold">⏱</div>
+      <div id="timer-text" class="text-2xl font-black">30s</div>
     </div>
 
-    <button id="submit-btn"
-      class="bg-blue-600 px-4 py-2 rounded font-bold
-             disabled:bg-slate-600
-             disabled:text-slate-300
-             disabled:cursor-not-allowed
-             disabled:opacity-60
-             transition-all"
-      disabled>
+    <button
+      id="submit-btn"
+      class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded font-bold disabled:opacity-40"
+      disabled
+    >
       Submit Answer
     </button>
   </div>
 
-  <!-- Leaderboard -->
-  <div class="w-64 bg-slate-800 p-4 rounded">
-    <h2 class="mb-2">Leaderboard</h2>
-    <div id="rankings"></div>
+  <!-- RIGHT: LEADERBOARD -->
+  <div class="w-72 bg-slate-900 p-4 rounded-xl">
+    <h2 class="text-xl font-bold mb-3">🏆 Leaderboard</h2>
+    <div id="rankings" class="space-y-2"></div>
   </div>
+
 </div>
 
-<!-- End Screen -->
-<div id="end-screen" class="hidden text-center mt-6">
-  <h2 class="text-4xl font-black">🏆 Winner</h2>
-  <div id="final-champ" class="text-6xl mt-4"></div>
+<!-- END SCREEN -->
+<div id="end-screen" class="hidden text-center mt-10">
+  <div class="text-7xl mb-4">👑</div>
+  <h2 class="text-4xl font-black mb-2">Winner</h2>
+  <div id="final-champ" class="text-6xl font-black text-yellow-400"></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+
 <script>
 const socket = io();
 
@@ -60,63 +65,44 @@ let currentIdx = 0;
 let selectedIdx = null;
 let canSubmit = false;
 
-// Join Room
+// JOIN
 socket.emit("joinRoom", { name: playerName });
 
-// Receive Question
-socket.on("questionUpdate", ({ index, question }) => {
-  currentIdx = index;
+/* ---------------- QUESTION ---------------- */
+socket.on("questionUpdate", data => {
+  currentIdx = data.index;
   selectedIdx = null;
   canSubmit = true;
 
-  document.getElementById("q-text").innerText = question.q;
+  document.getElementById("quiz-screen").style.display = "flex";
+  document.getElementById("end-screen").style.display = "none";
   document.getElementById("submit-btn").disabled = true;
+
+  document.getElementById("q-text").innerText = data.question.q;
+  document.getElementById("timer-text").innerText = "30s";
 
   const grid = document.getElementById("options-grid");
   grid.innerHTML = "";
 
-  question.o.forEach((opt, i) => {
+  data.question.o.forEach((opt, i) => {
     const btn = document.createElement("button");
     btn.innerText = opt;
-    btn.className = "bg-slate-800 p-4 rounded";
+    btn.className = "bg-slate-800 hover:bg-slate-700 p-4 rounded";
     btn.onclick = () => selectOption(i, btn);
     grid.appendChild(btn);
   });
 });
 
-// Timer Update
-<!-- Timer update -->
+/* ---------------- TIMER ---------------- */
 socket.on("timerUpdate", time => {
   document.getElementById("timer-text").innerText = `${time}s`;
   if (time <= 0) {
     canSubmit = false;
     document.getElementById("submit-btn").disabled = true;
-    document.querySelectorAll("#options-grid button").forEach(b => b.disabled = true);
   }
 });
 
-
-// Leaderboard Update
-socket.on("leaderboardUpdate", players => {
-  const list = document.getElementById("rankings");
-  list.innerHTML = "";
-  Object.values(players).sort((a,b)=>b.score-b.score)
-    .forEach(p => {
-      list.innerHTML += `<div>${p.name}: ${p.score}</div>`;
-    });
-});
-
-// Reveal Correct Answer
-socket.on("revealAnswer", ({ correctIdx }) => {
-  const buttons = document.querySelectorAll("#options-grid button");
-  buttons.forEach((btn, i) => {
-    btn.disabled = true;
-    if (i === correctIdx) btn.classList.add("correct");
-    else if (i === selectedIdx) btn.classList.add("incorrect");
-  });
-});
-
-// Submit Answer
+/* ---------------- SUBMIT ---------------- */
 document.getElementById("submit-btn").onclick = () => {
   if (!canSubmit || selectedIdx === null) return;
 
@@ -127,31 +113,63 @@ document.getElementById("submit-btn").onclick = () => {
 
   canSubmit = false;
   document.getElementById("submit-btn").disabled = true;
-
-  document.querySelectorAll("#options-grid button")
-    .forEach(b => b.disabled = true);
 };
 
-// Select Option
+/* ---------------- OPTION SELECT ---------------- */
 function selectOption(idx, btn) {
   if (!canSubmit) return;
-
   selectedIdx = idx;
 
-  document.querySelectorAll("#options-grid button")
-    .forEach(b => b.classList.remove("bg-yellow-600"));
+  [...document.getElementById("options-grid").children]
+    .forEach(b => b.classList.remove("selected"));
 
-  btn.classList.add("bg-yellow-600");
+  btn.classList.add("selected");
   document.getElementById("submit-btn").disabled = false;
 }
 
-// Quiz Ended
+/* ---------------- REVEAL ANSWER ---------------- */
+socket.on("revealAnswer", ({ correctIdx }) => {
+  const grid = document.getElementById("options-grid").children;
+  [...grid].forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === correctIdx) btn.classList.add("correct");
+    else if (i === selectedIdx) btn.classList.add("incorrect");
+  });
+});
+
+/* ---------------- LEADERBOARD (FIXED SORT) ---------------- */
+socket.on("leaderboardUpdate", playersObj => {
+  const list = document.getElementById("rankings");
+  list.innerHTML = "";
+
+  const sorted = Object.values(playersObj)
+    .sort((a, b) => b.score - a.score); // ✅ FIX
+
+  sorted.forEach((p, i) => {
+    list.innerHTML += `
+      <div class="flex justify-between items-center p-2 rounded
+        ${i === 0 ? 'bg-yellow-500/20 border border-yellow-400' : 'bg-slate-800 border border-slate-700'}">
+        <div class="flex gap-2">
+          <span class="font-black">${i + 1}</span>
+          <span class="truncate">${p.name}</span>
+        </div>
+        <span class="font-mono text-blue-400">${p.score}</span>
+      </div>
+    `;
+  });
+});
+
+/* ---------------- END QUIZ ---------------- */
 socket.on("quizEnded", ({ players }) => {
   document.getElementById("quiz-screen").style.display = "none";
-  document.getElementById("end-screen").classList.remove("hidden");
-  const winner = Object.values(players).sort((a,b)=>b.score-b.score)[0];
+  document.getElementById("end-screen").style.display = "block";
+
+  const winner = Object.values(players)
+    .sort((a, b) => b.score - a.score)[0];
+
   document.getElementById("final-champ").innerText = winner.name;
 });
 </script>
+
 </body>
 </html>
